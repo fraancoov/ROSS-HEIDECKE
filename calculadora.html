@@ -1,1 +1,906 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Depreciación Profesional – Método Ross-Heidecke</title>
+  <style>
+    :root {
+      --navy: #0b1f33;
+      --navy-2: #153a56;
+      --steel: #5c7288;
+      --light: #f3f6fa;
+      --white: #ffffff;
+      --accent: #1f6fbf;
+      --accent-2: #0f4c81;
+      --success: #2d7a4f;
+      --danger: #c74b4b;
+      --warning: #b56a00;
+      --border: #dfe8f1;
+      --shadow: 0 16px 42px rgba(11, 31, 51, 0.12);
+      --depreciacion: #2f7dd3;
+      --remanente: #7ec8ff;
+    }
 
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(135deg, #edf3f9 0%, #f8fbff 100%);
+      color: var(--navy);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 26px 18px 42px;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, var(--navy) 0%, var(--accent-2) 100%);
+      color: var(--white);
+      border-radius: 24px;
+      padding: 30px 32px;
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.7rem, 2.7vw, 2.35rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      margin: 0;
+      line-height: 1.6;
+      max-width: 860px;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.02fr 0.98fr;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel h2 {
+      margin: 0 0 18px;
+      font-size: 1.1rem;
+      color: var(--navy-2);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      font-weight: 600;
+      color: var(--steel);
+      font-size: 0.95rem;
+    }
+
+    .field input,
+    .field select {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      background: var(--light);
+      color: var(--navy);
+    }
+
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(31, 111, 191, 0.16);
+    }
+
+    .input-hint {
+      font-size: 0.9rem;
+      color: var(--steel);
+      margin-top: -2px;
+    }
+
+    .inline-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #f5f9fd;
+      color: var(--navy-2);
+      font-weight: 600;
+      margin-top: 4px;
+      width: fit-content;
+    }
+
+    .indicator.warning {
+      color: var(--warning);
+      background: #fff7e8;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-size: 0.96rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: var(--white);
+      box-shadow: 0 12px 24px rgba(31, 111, 191, 0.24);
+    }
+
+    .btn-secondary {
+      background: #f7f9fc;
+      color: var(--navy);
+      border: 1px solid var(--border);
+    }
+
+    .btn-accent {
+      background: #eff6ff;
+      color: var(--accent-2);
+      border: 1px solid #d8e8ff;
+    }
+
+    .info-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      margin-left: 8px;
+      border-radius: 50%;
+      background: #eef6ff;
+      color: var(--accent-2);
+      border: 1px solid #d8e8ff;
+      font-size: 1rem;
+    }
+
+    .table-panel {
+      margin-top: 10px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fbfdff;
+      display: none;
+    }
+
+    .table-panel table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    .table-panel th,
+    .table-panel td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e4ebf3;
+      text-align: left;
+    }
+
+    .table-panel th { color: var(--navy-2); font-weight: 700; }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #edf8f1;
+      color: var(--success);
+      font-weight: 600;
+      display: none;
+      border: 1px solid #cfe8d7;
+    }
+
+    .status.error {
+      background: #fff3f3;
+      color: var(--danger);
+      border-color: #f0c7c7;
+    }
+
+    .status.warning {
+      background: #fff7e8;
+      color: var(--warning);
+      border-color: #f3dfb2;
+    }
+
+    .results {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .result-card {
+      background: linear-gradient(135deg, #f8fbff 0%, #f1f6fb 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 14px 16px;
+    }
+
+    .result-card .label {
+      font-size: 0.86rem;
+      color: var(--steel);
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    .result-card .value {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--navy);
+      word-break: break-word;
+    }
+
+    .chart-card {
+      margin-top: 18px;
+      padding: 16px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #0f2744 0%, #163a5b 100%);
+      color: var(--white);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
+    .chart-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    .chart-title {
+      font-size: 0.94rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .chart-badge {
+      background: rgba(255,255,255,0.14);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .chart-shell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding: 6px 0 4px;
+    }
+
+    .chart-visual {
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      position: relative;
+      box-shadow: inset 0 0 0 12px rgba(255,255,255,0.08);
+      background: conic-gradient(var(--depreciacion) 0deg 360deg);
+    }
+
+    .chart-visual::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0f2744 0%, #163a5b 100%);
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .chart-center {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 8px;
+    }
+
+    .chart-value { font-size: 1.55rem; font-weight: 800; margin-bottom: 6px; }
+    .chart-caption { font-size: 0.95rem; color: rgba(255,255,255,0.8); line-height: 1.4; }
+
+    .chart-metrics {
+      display: grid;
+      gap: 8px;
+      min-width: 220px;
+      margin-top: 6px;
+    }
+
+    .chart-metric {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 10px 12px;
+    }
+
+    .chart-metric .label {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.75);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 2px;
+    }
+
+    .chart-metric .value { font-size: 0.95rem; font-weight: 700; }
+
+    .memory {
+      margin-top: 18px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #fcfeff;
+    }
+
+    .memory summary {
+      padding: 14px 16px;
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--navy-2);
+      list-style: none;
+    }
+
+    .memory summary::-webkit-details-marker { display: none; }
+
+    .memory-content {
+      padding: 0 16px 16px;
+      color: var(--steel);
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .print-only { display: none; }
+
+    .print-mode .app-shell { display: none; }
+    .print-mode .print-only { display: block; }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .hero { padding: 24px; }
+      .inline-row { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .page { padding: 16px 12px 32px; }
+      .panel { padding: 18px; }
+      .actions { flex-direction: column; }
+      button { width: 100%; }
+      .chart-shell { flex-direction: column; }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        color: #111;
+      }
+      .app-shell { display: none; }
+      .print-only { display: block; }
+      .page { max-width: 100%; padding: 0; }
+      .print-report { padding: 24px; }
+      .no-print { display: none !important; }
+      .panel, .hero, .memory { box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page app-shell">
+    <section class="hero">
+      <h1>Calculadora de Depreciación Profesional</h1>
+      <p>Herramienta técnica para estimar la depreciación de construcciones mediante el método Ross-Heidecke, integrando edad, vida útil y estado de conservación.</p>
+    </section>
+
+    <section class="grid">
+      <div class="panel">
+        <h2>Datos de entrada</h2>
+        <form id="depreciation-form">
+          <div class="field">
+            <label for="vrn">Valor de Reproducción Nuevo (VRN)</label>
+            <input id="vrn" name="vrn" type="number" min="0.01" step="0.01" placeholder="Ej. 18450" required />
+            <div class="input-hint">Valor total de la construcción considerada a estado nuevo.</div>
+          </div>
+
+          <div class="inline-row">
+            <div class="field">
+              <label for="age">Edad actual del inmueble (e)</label>
+              <input id="age" name="age" type="number" min="0" step="1" placeholder="Ej. 15" required />
+              <div class="input-hint">años</div>
+            </div>
+            <div class="field">
+              <label for="life">Vida útil total estimada (V)</label>
+              <input id="life" name="life" type="number" min="1" step="1" placeholder="Ej. 60" required />
+              <div class="input-hint">años</div>
+            </div>
+          </div>
+
+          <div id="relative-age-indicator" class="indicator">Edad relativa de la construcción: —</div>
+
+          <div class="field">
+            <label for="conservation">
+              Estado de conservación
+              <button type="button" class="info-toggle" id="info-toggle" aria-label="Ver tabla de coeficientes de conservación">ℹ</button>
+            </label>
+            <select id="conservation" name="conservation">
+              <option value="0.00">Grado 1 - Nuevo / Excelente estado (p = 0.00)</option>
+              <option value="0.03">Grado 2 - Regular / Conservación normal (p = 0.03)</option>
+              <option value="0.08" selected>Grado 3 - Reparaciones sencillas / Necesita mantenimiento menor (p = 0.08)</option>
+              <option value="0.18">Grado 4 - Reparaciones importantes / Desatendido (p = 0.18)</option>
+              <option value="0.50">Grado 5 - Demolición / Inservible (p = 0.50)</option>
+            </select>
+          </div>
+
+          <div id="conservation-info" class="table-panel">
+            <div style="font-weight:700; color:var(--navy-2); margin-bottom:8px;">Tabla de coeficientes de conservación adoptada por la aplicación</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Grado</th>
+                  <th>Estado</th>
+                  <th>Descripción</th>
+                  <th>Coeficiente p</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>1</td><td>Nuevo</td><td>Excelente estado</td><td>0.00</td></tr>
+                <tr><td>2</td><td>Regular</td><td>Conservación normal</td><td>0.03</td></tr>
+                <tr><td>3</td><td>Reparaciones sencillas</td><td>Necesita mantenimiento menor</td><td>0.08</td></tr>
+                <tr><td>4</td><td>Reparaciones importantes</td><td>Desatendido</td><td>0.18</td></tr>
+                <tr><td>5</td><td>Demolición</td><td>Inservible</td><td>0.50</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="actions">
+            <button type="submit" class="btn-primary">Calcular</button>
+            <button type="reset" class="btn-secondary">Limpiar</button>
+            <button type="button" id="copy-results" class="btn-accent">Copiar resultados</button>
+            <button type="button" id="generate-report" class="btn-accent">Generar reporte</button>
+          </div>
+
+          <div id="status" class="status" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Resultados</h2>
+        <div class="results">
+          <div class="result-card">
+            <div class="label">Valor de Reproducción Nuevo</div>
+            <div id="result-vrn" class="value">—</div>
+          </div>
+          <div class="result-card">
+            <div class="label">Edad relativa (e/V)</div>
+            <div id="result-relative-age" class="value">—</div>
+          </div>
+          <div class="result-card">
+            <div class="label">Factor de depreciación Ross (R)</div>
+            <div id="result-r" class="value">—</div>
+          </div>
+          <div class="result-card">
+            <div class="label">Coeficiente de conservación Heidecke (p)</div>
+            <div id="result-p" class="value">—</div>
+          </div>
+          <div class="result-card">
+            <div class="label">Factor total Ross-Heidecke</div>
+            <div id="result-total" class="value">—</div>
+          </div>
+          <div class="result-card">
+            <div class="label">Depreciación acumulada en porcentaje</div>
+            <div id="result-depreciation-percent" class="value">—</div>
+          </div>
+          <div class="result-card">
+            <div class="label">Depreciación acumulada en pesos</div>
+            <div id="result-depreciation" class="value">—</div>
+          </div>
+          <div class="result-card">
+            <div class="label">Porcentaje de valor remanente</div>
+            <div id="result-remaining-percent" class="value">—</div>
+          </div>
+          <div class="result-card">
+            <div class="label">Valor Neto de Reposición</div>
+            <div id="result-net" class="value">—</div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-top">
+            <div class="chart-title">Composición del valor total</div>
+            <div id="chart-badge" class="chart-badge">0.00%</div>
+          </div>
+          <div class="chart-shell">
+            <div id="chart-visual" class="chart-visual">
+              <div class="chart-center">
+                <div id="chart-percentage" class="chart-value">0.00%</div>
+                <div class="chart-caption">depreciación acumulada</div>
+              </div>
+            </div>
+            <div class="chart-metrics">
+              <div class="chart-metric">
+                <div class="label">Depreciación acumulada</div>
+                <div id="chart-depreciation" class="value">0.00% / $0.00 MXN</div>
+              </div>
+              <div class="chart-metric">
+                <div class="label">Valor remanente</div>
+                <div id="chart-remaining" class="value">0.00% / $0.00 MXN</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <details class="memory" id="memory-panel">
+          <summary>Ver memoria de cálculo</summary>
+          <div id="memory-content" class="memory-content">
+            Primero debe realizar un cálculo válido para ver la memoria técnica.
+          </div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <section class="print-only print-report">
+    <div id="report-content"></div>
+  </section>
+
+  <script>
+    const form = document.getElementById('depreciation-form');
+    const statusEl = document.getElementById('status');
+    const relativeAgeIndicator = document.getElementById('relative-age-indicator');
+    const infoToggle = document.getElementById('info-toggle');
+    const conservationInfo = document.getElementById('conservation-info');
+    const memoryContent = document.getElementById('memory-content');
+    const chartVisual = document.getElementById('chart-visual');
+    const chartPercentage = document.getElementById('chart-percentage');
+    const chartBadge = document.getElementById('chart-badge');
+    const chartDepText = document.getElementById('chart-depreciation');
+    const chartRemText = document.getElementById('chart-remaining');
+    const reportButton = document.getElementById('generate-report');
+    const copyButton = document.getElementById('copy-results');
+
+    let ultimoCalculo = null;
+
+    const setStatus = (message, type = 'info') => {
+      statusEl.textContent = message;
+      statusEl.className = `status ${type}`;
+      statusEl.style.display = 'block';
+    };
+
+    const clearStatus = () => {
+      statusEl.textContent = '';
+      statusEl.className = 'status';
+      statusEl.style.display = 'none';
+    };
+
+    const formatoMoneda = (valor) => new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(valor);
+
+    const formatoFactor = (valor) => Number(valor).toLocaleString('en-US', {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 4
+    });
+
+    const formatoPorcentaje = (valor) => `${Number(valor).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })}%`;
+
+    const leerNumero = (id) => {
+      const element = document.getElementById(id);
+      if (!element || element.value === '') return NaN;
+      const parsed = Number.parseFloat(element.value);
+      return Number.isFinite(parsed) ? parsed : NaN;
+    };
+
+    const actualizarEdadRelativa = () => {
+      const edad = leerNumero('age');
+      const vidaUtil = leerNumero('life');
+      if (!Number.isFinite(edad) || edad < 0 || !Number.isFinite(vidaUtil) || vidaUtil <= 0) {
+        relativeAgeIndicator.textContent = 'Edad relativa de la construcción: —';
+        relativeAgeIndicator.classList.remove('warning');
+        return;
+      }
+      const edadRelativa = (edad / vidaUtil) * 100;
+      relativeAgeIndicator.textContent = `Edad relativa de la construcción: ${edadRelativa.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+      if (edad > vidaUtil) {
+        relativeAgeIndicator.classList.add('warning');
+      } else {
+        relativeAgeIndicator.classList.remove('warning');
+      }
+    };
+
+    const validarDatos = () => {
+      const vrn = leerNumero('vrn');
+      const edad = leerNumero('age');
+      const vidaUtil = leerNumero('life');
+      const coeficienteHeidecke = leerNumero('conservation');
+
+      if (!Number.isFinite(vrn) || vrn <= 0) {
+        setStatus('El Valor de Reproducción Nuevo debe ser mayor que cero.', 'error');
+        return null;
+      }
+      if (!Number.isFinite(edad) || edad < 0) {
+        setStatus('La edad actual no puede ser negativa.', 'error');
+        return null;
+      }
+      if (!Number.isFinite(vidaUtil) || vidaUtil <= 0) {
+        setStatus('La vida útil debe ser mayor que cero.', 'error');
+        return null;
+      }
+      if (!Number.isFinite(coeficienteHeidecke) || coeficienteHeidecke < 0) {
+        setStatus('Seleccione un coeficiente de conservación válido.', 'error');
+        return null;
+      }
+      if (edad >= vidaUtil) {
+        setStatus('La vida útil total debe ser estrictamente mayor que la edad actual.', 'error');
+        return null;
+      }
+
+      return { vrn, edad, vidaUtil, coeficienteHeidecke };
+    };
+
+    const actualizarGrafica = (depreciacionPorcentaje, valorRemanentePorcentaje, depreciacionPesos, valorNeto) => {
+      const dep = Number.isFinite(depreciacionPorcentaje) ? Math.max(0, Math.min(100, depreciacionPorcentaje)) : 0;
+      const rem = Number.isFinite(valorRemanentePorcentaje) ? Math.max(0, Math.min(100, valorRemanentePorcentaje)) : 0;
+      const total = dep + rem;
+      const depAngle = total > 100 ? 360 : (dep / 100) * 360;
+      const remAngle = total > 100 ? 0 : (rem / 100) * 360;
+      chartVisual.style.background = `conic-gradient(var(--depreciacion) 0deg ${depAngle}deg, var(--remanente) ${depAngle}deg ${depAngle + remAngle}deg, #d8e8ff ${depAngle + remAngle}deg 360deg)`;
+      chartPercentage.textContent = formatoPorcentaje(dep);
+      chartBadge.textContent = formatoPorcentaje(dep);
+      chartDepText.textContent = `${formatoPorcentaje(dep)} / ${formatoMoneda(depreciacionPesos)}`;
+      chartRemText.textContent = `${formatoPorcentaje(rem)} / ${formatoMoneda(valorNeto)}`;
+    };
+
+    const generarMemoriaCalculo = (calculo) => {
+      const { vrn, edad, vidaUtil, edadRelativa, estadoConservacion, coeficienteHeidecke, factorRoss, factorTotal, depreciacionPorcentaje, depreciacionPesos, valorRemanentePorcentaje, valorNetoReposicion } = calculo;
+      return [
+        '<strong>A. Datos de entrada</strong><br />',
+        `VRN = ${formatoMoneda(vrn)}<br />`,
+        `e = ${edad} años<br />`,
+        `V = ${vidaUtil} años<br />`,
+        `p = ${formatoFactor(coeficienteHeidecke)}<br />`,
+        `Estado de conservación = ${estadoConservacion}<br /><br />`,
+        '<strong>B. Relación edad / vida útil</strong><br />',
+        `e / V = ${edad} / ${vidaUtil} = ${formatoPorcentaje(edadRelativa)}<br /><br />`,
+        '<strong>C. Factor Ross</strong><br />',
+        `R = 0.5 × [(e / V) + (e² / V²)]<br />`,
+        `R = 0.5 × [(${edad} / ${vidaUtil}) + (${edad}² / ${vidaUtil}²)]<br />`,
+        `R = ${formatoFactor(factorRoss)}<br /><br />`,
+        '<strong>D. Factor total Ross-Heidecke</strong><br />',
+        `F_total = R + [p × (1 - R)]<br />`,
+        `F_total = ${formatoFactor(factorRoss)} + [${formatoFactor(coeficienteHeidecke)} × (1 - ${formatoFactor(factorRoss)})]<br />`,
+        `F_total = ${formatoFactor(factorTotal)}<br /><br />`,
+        '<strong>E. Depreciación acumulada</strong><br />',
+        `Depreciación acumulada = VRN × F_total = ${formatoMoneda(vrn)} × ${formatoFactor(factorTotal)} = ${formatoMoneda(depreciacionPesos)}<br />`,
+        `Depreciación acumulada = ${formatoPorcentaje(depreciacionPorcentaje)}<br /><br />`,
+        '<strong>F. Valor Neto de Reposición</strong><br />',
+        `VNR = VRN × (1 - F_total) = ${formatoMoneda(vrn)} × (1 - ${formatoFactor(factorTotal)}) = ${formatoMoneda(valorNetoReposicion)}<br />`,
+        `Valor remanente = ${formatoPorcentaje(valorRemanentePorcentaje)}<br />`
+      ].join('');
+    };
+
+    const actualizarResultados = (calculo) => {
+      document.getElementById('result-vrn').textContent = formatoMoneda(calculo.vrn);
+      document.getElementById('result-relative-age').textContent = formatoPorcentaje(calculo.edadRelativa);
+      document.getElementById('result-r').textContent = formatoFactor(calculo.factorRoss);
+      document.getElementById('result-p').textContent = formatoFactor(calculo.coeficienteHeidecke);
+      document.getElementById('result-total').textContent = formatoFactor(calculo.factorTotal);
+      document.getElementById('result-depreciation-percent').textContent = formatoPorcentaje(calculo.depreciacionPorcentaje);
+      document.getElementById('result-depreciation').textContent = formatoMoneda(calculo.depreciacionPesos);
+      document.getElementById('result-remaining-percent').textContent = formatoPorcentaje(calculo.valorRemanentePorcentaje);
+      document.getElementById('result-net').textContent = formatoMoneda(calculo.valorNetoReposicion);
+      actualizarGrafica(calculo.depreciacionPorcentaje, calculo.valorRemanentePorcentaje, calculo.depreciacionPesos, calculo.valorNetoReposicion);
+      memoryContent.innerHTML = generarMemoriaCalculo(calculo);
+      document.getElementById('memory-panel').open = true;
+    };
+
+    const calcularDepreciacion = () => {
+      clearStatus();
+      const datos = validarDatos();
+      if (!datos) return;
+
+      const { vrn, edad, vidaUtil, coeficienteHeidecke } = datos;
+      const relacionEdad = edad / vidaUtil;
+      const factorRoss = 0.5 * (relacionEdad + Math.pow(relacionEdad, 2));
+      const factorTotal = factorRoss + coeficienteHeidecke * (1 - factorRoss);
+      const depreciacionPorcentaje = factorTotal * 100;
+      const depreciacionPesos = vrn * factorTotal;
+      const valorRemanentePorcentaje = (1 - factorTotal) * 100;
+      const valorNetoReposicion = vrn * (1 - factorTotal);
+
+      const valoresValidos = [vrn, edad, vidaUtil, coeficienteHeidecke, relacionEdad, factorRoss, factorTotal, depreciacionPorcentaje, depreciacionPesos, valorRemanentePorcentaje, valorNetoReposicion];
+      if (valoresValidos.some((value) => !Number.isFinite(value) || value < 0)) {
+        setStatus('El cálculo arrojó un resultado inválido. Revise los datos.', 'error');
+        return;
+      }
+
+      const estadoConservacion = document.getElementById('conservation').selectedOptions[0]?.text || '';
+      ultimoCalculo = {
+        vrn,
+        edad,
+        vidaUtil,
+        edadRelativa: relacionEdad * 100,
+        estadoConservacion,
+        coeficienteHeidecke,
+        factorRoss,
+        factorTotal,
+        depreciacionPorcentaje,
+        depreciacionPesos,
+        valorRemanentePorcentaje,
+        valorNetoReposicion
+      };
+
+      actualizarResultados(ultimoCalculo);
+      reportButton.disabled = false;
+      copyButton.disabled = false;
+      setStatus('Cálculo realizado correctamente.', 'info');
+    };
+
+    const generarReporte = () => {
+      if (!ultimoCalculo) {
+        setStatus('Primero realiza un cálculo válido para generar el reporte.', 'warning');
+        return;
+      }
+      const today = new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' });
+      const reportContent = document.getElementById('report-content');
+      reportContent.innerHTML = `
+        <h1 style="margin:0 0 12px; font-size: 24px;">Reporte de depreciación Ross-Heidecke</h1>
+        <p style="margin:0 0 16px;"><strong>Fecha de cálculo:</strong> ${today}</p>
+        <h2 style="margin: 18px 0 8px; font-size: 18px;">Datos de entrada</h2>
+        <ul>
+          <li>VRN: ${formatoMoneda(ultimoCalculo.vrn)}</li>
+          <li>Edad (e): ${ultimoCalculo.edad} años</li>
+          <li>Vida útil (V): ${ultimoCalculo.vidaUtil} años</li>
+          <li>Estado de conservación: ${ultimoCalculo.estadoConservacion}</li>
+          <li>Coeficiente p: ${formatoFactor(ultimoCalculo.coeficienteHeidecke)}</li>
+        </ul>
+        <h2 style="margin: 18px 0 8px; font-size: 18px;">Resultados</h2>
+        <ul>
+          <li>Edad relativa: ${formatoPorcentaje(ultimoCalculo.edadRelativa)}</li>
+          <li>Factor Ross (R): ${formatoFactor(ultimoCalculo.factorRoss)}</li>
+          <li>Factor total Ross-Heidecke: ${formatoFactor(ultimoCalculo.factorTotal)}</li>
+          <li>Depreciación acumulada: ${formatoPorcentaje(ultimoCalculo.depreciacionPorcentaje)} (${formatoMoneda(ultimoCalculo.depreciacionPesos)})</li>
+          <li>Valor remanente: ${formatoPorcentaje(ultimoCalculo.valorRemanentePorcentaje)} (${formatoMoneda(ultimoCalculo.valorNetoReposicion)})</li>
+          <li>Valor Neto de Reposición: ${formatoMoneda(ultimoCalculo.valorNetoReposicion)}</li>
+        </ul>
+        <h2 style="margin: 18px 0 8px; font-size: 18px;">Memoria de cálculo</h2>
+        <div>${generarMemoriaCalculo(ultimoCalculo)}</div>
+        <p style="margin-top: 20px; font-size: 0.95rem; color: #4a5b6a;">Resultado obtenido mediante la aplicación matemática del método Ross-Heidecke con los datos proporcionados por el usuario. La determinación de la edad, vida útil, estado de conservación y Valor de Reproducción Nuevo corresponde al criterio técnico del valuador responsable.</p>
+      `;
+      document.body.classList.add('print-mode');
+      window.print();
+      setTimeout(() => document.body.classList.remove('print-mode'), 500);
+    };
+
+    const copiarResultados = () => {
+      if (!ultimoCalculo) {
+        setStatus('Primero debe realizar un cálculo válido para copiar resultados.', 'warning');
+        return;
+      }
+      const text = [
+        'Calculadora de Depreciación Profesional – Método Ross-Heidecke',
+        `VRN: ${formatoMoneda(ultimoCalculo.vrn)}`,
+        `Edad relativa: ${formatoPorcentaje(ultimoCalculo.edadRelativa)}`,
+        `R: ${formatoFactor(ultimoCalculo.factorRoss)}`,
+        `p: ${formatoFactor(ultimoCalculo.coeficienteHeidecke)}`,
+        `F_total: ${formatoFactor(ultimoCalculo.factorTotal)}`,
+        `Depreciación acumulada: ${formatoPorcentaje(ultimoCalculo.depreciacionPorcentaje)} (${formatoMoneda(ultimoCalculo.depreciacionPesos)})`,
+        `Valor remanente: ${formatoPorcentaje(ultimoCalculo.valorRemanentePorcentaje)} (${formatoMoneda(ultimoCalculo.valorNetoReposicion)})`,
+        `Valor Neto de Reposición: ${formatoMoneda(ultimoCalculo.valorNetoReposicion)}`
+      ].join('\n');
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setStatus('Resultados copiados al portapapeles.', 'info');
+        }).catch(() => {
+          setStatus('No se pudo copiar automáticamente; copie el contenido manualmente.', 'warning');
+        });
+      } else {
+        setStatus('La copia al portapapeles no está disponible en este navegador.', 'warning');
+      }
+    };
+
+    const limpiarCalculadora = () => {
+      form.reset();
+      document.getElementById('result-vrn').textContent = '—';
+      document.getElementById('result-relative-age').textContent = '—';
+      document.getElementById('result-r').textContent = '—';
+      document.getElementById('result-p').textContent = '—';
+      document.getElementById('result-total').textContent = '—';
+      document.getElementById('result-depreciation-percent').textContent = '—';
+      document.getElementById('result-depreciation').textContent = '—';
+      document.getElementById('result-remaining-percent').textContent = '—';
+      document.getElementById('result-net').textContent = '—';
+      chartVisual.style.background = 'conic-gradient(var(--depreciacion) 0deg 360deg)';
+      chartPercentage.textContent = '0.00%';
+      chartBadge.textContent = '0.00%';
+      chartDepText.textContent = '0.00% / $0.00 MXN';
+      chartRemText.textContent = '0.00% / $0.00 MXN';
+      memoryContent.innerHTML = 'Primero debe realizar un cálculo válido para ver la memoria técnica.';
+      document.getElementById('memory-panel').open = false;
+      relativeAgeIndicator.textContent = 'Edad relativa de la construcción: —';
+      relativeAgeIndicator.classList.remove('warning');
+      ultimoCalculo = null;
+      reportButton.disabled = true;
+      copyButton.disabled = true;
+      clearStatus();
+    };
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      calcularDepreciacion();
+    });
+
+    form.addEventListener('reset', (event) => {
+      event.preventDefault();
+      limpiarCalculadora();
+    });
+
+    document.getElementById('age').addEventListener('input', actualizarEdadRelativa);
+    document.getElementById('life').addEventListener('input', actualizarEdadRelativa);
+
+    infoToggle.addEventListener('click', () => {
+      conservationInfo.style.display = conservationInfo.style.display === 'block' ? 'none' : 'block';
+    });
+
+    copyButton.addEventListener('click', copiarResultados);
+    reportButton.addEventListener('click', generarReporte);
+
+    reportButton.disabled = true;
+    copyButton.disabled = true;
+    actualizarEdadRelativa();
+    limpiarCalculadora();
+  </script>
+</body>
+</html>
